@@ -1,0 +1,39 @@
+drop table if exists t_user;
+create table t_user(
+	user_id bigint primary key auto_increment,
+	user_name varchar(30),
+	user_password varchar(30)
+);
+drop table if exists t_order;
+create table t_order(
+	order_id bigint primary key auto_increment,
+	order_name varchar(30),
+	u_id bigint
+);
+drop table if exists t_order_item;
+create table t_order_item(
+	item_id bigint primary key auto_increment,
+	item_name varchar(30),
+	o_id bigint
+);
+drop table if exists t_addr;
+create table t_addr(
+	addr_id bigint primary key auto_increment,
+	addr_name varchar(30),
+	u_id bigint
+);
+drop table if exists t_addr_detail;
+create table t_addr_detail(
+	detail_id bigint primary key auto_increment,
+	detail_desc varchar(300),
+	addr_id bigint(30)
+);
+insert into t_user(user_id,user_name,user_password)values(-1,'lucy','lucy123456')
+,(-2,'marry','marry123456');
+insert into t_order(order_id,order_name,u_id)values(-1,'order_lucy_1',-1)
+,(-2,'order_lucy_2',-1);
+insert into t_order_item(item_id,item_name,o_id)values(-1,'item_1',-1)
+,(-2,'item_2',-1),(-3,'item_3',-2);
+insert into t_addr(addr_id,addr_name,u_id)values(-1,'lucy_home',-1)
+,(-2,'marry_home',-2);
+insert into t_addr_detail(detail_id,detail_desc,addr_id)values(-1,'lucy_home_detail',-1);

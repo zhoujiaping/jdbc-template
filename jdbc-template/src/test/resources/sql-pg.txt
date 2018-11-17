@@ -1,0 +1,66 @@
+create table t_user(
+	user_id  serial primary key,
+	user_name varchar(30),
+	user_password varchar(30)
+);
+create table t_order(
+	order_id  serial primary key,
+	order_name varchar(30),
+	u_id bigint
+);
+create table t_order_item(
+	item_id  serial primary key,
+	item_name varchar(30),
+	o_id bigint
+);
+create table t_addr(
+	addr_id  serial primary key,
+	addr_name varchar(30),
+	u_id bigint
+);
+create table t_addr_detail(
+	detail_id  serial primary key,
+	detail_desc varchar(300),
+	addr_id bigint
+);
+insert into t_user(user_id,user_name,user_password)values(-1,'lucy','lucy123456')
+,(-2,'marry','marry123456');
+select * from t_user;
+
+insert into t_order(order_id,order_name,u_id)values(-1,'order_lucy_1',-1)
+,(-2,'order_lucy_2',-1);
+select * from t_order;
+
+insert into t_order_item(item_id,item_name,o_id)values(-1,'item_1',-1)
+,(-2,'item_2',-1),(-3,'item_3',-2);
+select * from t_order_item;
+
+insert into t_addr(addr_id,addr_name,u_id)values(-1,'lucy_home',-1)
+,(-2,'marry_home',-2);
+select * from t_addr;
+
+insert into t_addr_detail(detail_id,detail_desc,addr_id)values(-1,'lucy_home_detail',-1);
+select * from t_addr_detail;
+/*
+lucy
+--oder_lucy_1
+----item_1
+----item_2
+--order_lucy_2
+----item_3
+--lucy_home
+----lucy_home_detail
+marry
+--marry_home
+*/
+
+select t1.*,t2.*,t3.*,t4.*,t5.* 
+from t_user t1 
+left join t_addr t2 
+on t1.user_id = t2.u_id
+left join t_order t3 
+on t3.u_id = t1.user_id 
+left join t_order_item t4 
+on t4.o_id = t3.order_id 
+left join t_addr_detail t5 
+on t5.addr_id = t2.addr_id;
