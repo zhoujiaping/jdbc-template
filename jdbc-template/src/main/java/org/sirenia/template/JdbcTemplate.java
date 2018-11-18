@@ -273,4 +273,23 @@ public class JdbcTemplate {
 		JSONArray array = session.queryWithNest(sql, params, config);
 		return array.toJavaList(clazz);
 	}
+	/**
+	 * 关联查询，得到嵌套的结果。比如user（用户）有orderList（订单列表）
+	 * @param sql
+	 * @param params
+	 * @param config
+	 * @param clazz
+	 * @return
+	 */
+	public <T> T selectOneWithNest(String sql,JSONObject params,JSONArray config,Class<T> clazz){
+		Session session = sessionFactory.getSession(true);
+		JSONArray array = session.queryWithNest(sql, params, config);
+		if(array.size()==0){
+			return null;
+		}else if(array.size()==1){
+			return array.getObject(0, clazz);
+		}else{
+			throw new RuntimeException("selectOneWithNest返回了【"+array.size()+"】条结果");
+		}
+	}
 }
