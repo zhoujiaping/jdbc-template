@@ -1,12 +1,15 @@
 package org.sirenia.util;
 
-import com.alibaba.fastjson.JSONArray;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.sirenia.model.ParsedSql;
+
 import com.alibaba.fastjson.JSONObject;
 
 public class SqlUtils {
-	public static JSONObject parseSql(String sql, JSONObject params) {
-		JSONObject res = new JSONObject();
-		JSONArray names = new JSONArray();
+	public static ParsedSql parseSql(String sql, JSONObject params) {
+		List<String> names = new ArrayList<>();
 		sql = new GenericTokenParser("#{","}",(token)->{
 			names.add(token);
 			return "?";
@@ -14,8 +17,9 @@ public class SqlUtils {
 		sql = new GenericTokenParser("${","}",(token)->{
 			return String.valueOf(params.get(token));
 		}).parse(sql);
-		res.put("sql", sql);
-		res.put("names", names);
-		return res;
+		ParsedSql parsedSql = new ParsedSql();
+		parsedSql.setSql(sql);
+		parsedSql.setParamNames(names);
+		return parsedSql;
 	}
 }

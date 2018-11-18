@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.sirenia.model.DbMetaData;
+import org.sirenia.model.ParsedSql;
 import org.sirenia.util.Propertys;
 import org.sirenia.util.SqlUtils;
 import org.sirenia.util.page.Pageable;
@@ -107,17 +108,17 @@ public class Session {
 	 * @return
 	 */
 	public JSONObject queryWithForm(String sql,JSONObject params){
-		JSONObject parseRes = null;
+		ParsedSql parsedSql = null;
 		if(params!=null){
 			//设置参数
-			parseRes = SqlUtils.parseSql(sql,params);
-			sql = parseRes.getString("sql");
+			parsedSql = SqlUtils.parseSql(sql,params);
+			sql = parsedSql.getSql();
 		}
 		try (PreparedStatement ps = conn.prepareStatement(sql);) {
 			logger.info("sql=>{}",sql);
 			String paramValues = null;
 			if(params!=null){
-				JSONArray names = parseRes.getJSONArray("names");
+				List<String> names = parsedSql.getParamNames();
 				for(int i=0;i<names.size();i++){
 					ps.setObject(i+1, params.get(names.get(i)));
 				}
@@ -359,17 +360,17 @@ public class Session {
 	 * @return
 	 */
 	public JSONArray query(String sql,JSONObject params) {
-		JSONObject parseRes = null;
+		ParsedSql ParsedSql = null;
 		if(params!=null){
 			//设置参数
-			parseRes = SqlUtils.parseSql(sql,params);
-			sql = parseRes.getString("sql");
+			ParsedSql = SqlUtils.parseSql(sql,params);
+			sql = ParsedSql.getSql();
 		}
 		try (PreparedStatement ps = conn.prepareStatement(sql);) {
 			logger.info("sql=>{}",sql);
 			String paramValues = null;
 			if(params!=null){
-				JSONArray names = parseRes.getJSONArray("names");
+				List<String> names = ParsedSql.getParamNames();
 				for(int i=0;i<names.size();i++){
 					ps.setObject(i+1, params.get(names.get(i)));
 				}
@@ -461,17 +462,17 @@ public class Session {
 	 * @return
 	 */
 	public int update(String sql,JSONObject params) {
-		JSONObject parseRes = null;
+		ParsedSql parsedSql = null;
 		if(params!=null){
 			//设置参数
-			parseRes = SqlUtils.parseSql(sql,params);
-			sql = parseRes.getString("sql");
+			parsedSql = SqlUtils.parseSql(sql,params);
+			sql = parsedSql.getSql();
 		}
 		try (PreparedStatement ps = conn.prepareStatement(sql)) {
 			logger.info("sql=>{}",sql);
 			String values = null;
 			if(params!=null){
-				JSONArray names = parseRes.getJSONArray("names");
+				List<String> names = parsedSql.getParamNames();
 				for(int i=0;i<names.size();i++){
 					ps.setObject(i+1, params.get(names.get(i)));
 				}
