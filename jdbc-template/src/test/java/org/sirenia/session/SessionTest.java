@@ -187,7 +187,7 @@ public class SessionTest {
 		template.setSessionFactory(sessionFactory);
 		Session session = sessionFactory.getSession(true);
 		JSONObject params = null;
-		JSONArray config = new JSONArray();
+		List<String> config = new ArrayList<>();
 		config.add("t_user:user_id,t_order:order_id:orderList,t_order_item:item_id:itemList");
 		config.add("t_user:user_id,t_addr:addr_id:addrList,t_addr_detail:detail_id:detailList");
 		config.add("");
@@ -207,7 +207,7 @@ public class SessionTest {
 		template.setSessionFactory(sessionFactory);
 		Session session = sessionFactory.getSession(true);
 		JSONObject params = null;
-		JSONArray config = new JSONArray();
+		List<String> config = new ArrayList<>();
 		config.add("t_user:user_id,t_order:order_id:orderList,t_order_item:item_id:itemList");
 		//config.add("t_user:user_id,t_addr:addr_id:addr,t_addr_detail:detail_id:detail");
 		config.add("");
@@ -231,7 +231,7 @@ public class SessionTest {
 		template.setSessionFactory(sessionFactory);
 		Session session = sessionFactory.getSession(true);
 		JSONObject params = null;
-		JSONArray config = new JSONArray();
+		List<String> config = new ArrayList<>();
 		config.add("t_user:user_id,t_user2:user_id:aList");
 		config.add("");
 		JSONArray res = session.queryWithNest("select t1.*,t2.user_id as t_user2$user_id from t_user t1 left join t_user t2 on t1.user_id>t2.user_id", params , config );

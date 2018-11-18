@@ -119,7 +119,7 @@ public class Session {
 			sql = parsedSql.getSql();
 		}
 		try (PreparedStatement ps = conn.prepareStatement(sql);) {
-			logger.info("sql=>{}",sql);
+			logger.debug("sql=>{}",sql);
 			String paramValues = null;
 			if(params!=null){
 				List<String> names = parsedSql.getParamNames();
@@ -128,7 +128,7 @@ public class Session {
 				}
 				paramValues = names.stream().map(name->params.get(name)).collect(Collectors.toList()).toString();
 			}
-			logger.info("params=>{}",paramValues);
+			logger.debug("params=>{}",paramValues);
 			ResultSet rs = ps.executeQuery();
 			try{
 				ResultSetMetaData rsmd = rs.getMetaData();
@@ -175,26 +175,22 @@ public class Session {
 		}
 	}
 	/**
-	 * 支持一对一、一对多、多对多、多对一查询。
+	 * 用户可以根据字符串构建nestConf，也可以通过反射根据class构建nestConf。
+	 * 建议使用字符串方式，使用反射方式局限性大。
 	 * @param sql
 	 * @param params
-	 * @param config   表名:主键:父节点的属性名
-	 * （表名也可以使用别名，如果支持的话。主键可以是其他能标识一条记录的字段名。根节点没有父节点，不用写属性名）
-	 * t1:id,t2:id:orderList,t4:item_id:itemList
-	 * t1:id,t3:addr_id:addr
-	 * 如果您使用mysql，在连接数据库的url加上useOldAliasMetaDataBehavior=true，则可以使用表的别名。
-	 * 如果您使用postgresql，由于其不支持别名，所以必须使用表名。这样在表的自连接的情况就无法使用该方法实现嵌套了。
-	 * pg自连接查询的解决办法：将自连接的另一个表的字段别名命名为"新表名$列别名"
-	 * 此外，该方法还有个缺陷，就是如果某一列通过计算得到或者不是从某个表查出，那么将不会计入结果。
-	 * 这个可以通过将列的别名命名为"表名$列别名"方式解决。
+	 * @param nestConf
 	 * @return
 	 */
-	public JSONArray queryWithNest(String sql,JSONObject params,JSONArray config){
+	public JSONArray queryWithNest(String sql,JSONObject params,NestConf nestConf){
+		JSONArray res = new JSONArray();
 		Form form = queryForForm(sql,params);
 		List<List<Object>> valuesArray = form.getValuesArray();
+		if(valuesArray.isEmpty()){
+			return res;
+		}
 		Map<String,List<Integer>> columnIndexsMap = new HashMap<>();//每个表的字段对应哪些下标
 		List<String> tables = form.getTables();
-		NestConf nestConf = parseNestConfig(config);
 		NestNode rootNode = nestConf.getRoot();
 		Map<String,NestNode> nodeMap = nestConf.getMap();
 		List<String> columns = form.getColumns();
@@ -224,7 +220,6 @@ public class Session {
 				collectKeyIndexs.put(possibleTableRowKey, i);
 			}
 		}
-		JSONArray res = new JSONArray();
 		Map<String,JSONObject> collected = new HashMap<>();
 		for(int i=0;i<valuesArray.size();i++){
 			//遍历树，深度优先遍历
@@ -235,6 +230,25 @@ public class Session {
 			}
 		}
 		return res;
+	}
+	/**
+	 * 支持一对一、一对多、多对多、多对一查询。
+	 * @param sql
+	 * @param params
+	 * @param config   表名:主键:父节点的属性名
+	 * （表名也可以使用别名，如果支持的话。主键可以是其他能标识一条记录的字段名。根节点没有父节点，不用写属性名）
+	 * t1:id,t2:id:orderList,t4:item_id:itemList
+	 * t1:id,t3:addr_id:addr
+	 * 如果您使用mysql，在连接数据库的url加上useOldAliasMetaDataBehavior=true，则可以使用表的别名。
+	 * 如果您使用postgresql，由于其不支持别名，所以必须使用表名。这样在表的自连接的情况就无法使用该方法实现嵌套了。
+	 * pg自连接查询的解决办法：将自连接的另一个表的字段别名命名为"新表名$列别名"
+	 * 此外，该方法还有个缺陷，就是如果某一列通过计算得到或者不是从某个表查出，那么将不会计入结果。
+	 * 这个可以通过将列的别名命名为"表名$列别名"方式解决。
+	 * @return
+	 */
+	public JSONArray queryWithNest(String sql,JSONObject params,List<String> config){
+		NestConf nestConf = NestConf.parseNestConfig(config);
+		return queryWithNest(sql, params, nestConf);
 	}
 	private String getTableRowKey(String table,String rowKey){
 		return table+"."+rowKey;
@@ -299,71 +313,11 @@ public class Session {
 		}
 	}
 	public static void main(String[] args) {
-		JSONArray config = new JSONArray();
+		List<String> config = new ArrayList<>();
 		config.add("t1:id,t2:orderList:id,t4:itemList");
 		config.add("t1:id,t3:addr");
-		NestConf res = parseNestConfig(config);
+		NestConf res = NestConf.parseNestConfig(config);
 		System.out.println(JSONObject.toJSONString(res,true));
-	}
-	/**
-	 * @param config   表名:主键:父节点的属性名
-	 * （表名也可以使用别名，如果支持的话。主键可以是其他能标识一条记录的字段名。根节点没有父节点，不用写属性名）
-	 * t1:id,t2:id:orderList,t4:item_id:itemList
-	 * t1:id,t3:addr_id:addr
-	 * @return JSONObject
-	 * it is a tree
-	 */
-	private static NestConf parseNestConfig(JSONArray config) {
-		NestConf res = null;
-		if(config!=null && !config.isEmpty()){
-			res = new NestConf();
-			NestNode root = null;
-			Map<String,NestNode> map = new HashMap<>();
-			for(int i=0;i<config.size();i++){
-				NestNode parent = root;
-				String line = config.getString(i).replaceAll("\\s", "");
-				if(line.equals("")){
-					continue;
-				}
-				String[] tableDescriptions = line.split(",");
-				for(int j=0;j<tableDescriptions.length;j++){
-					String[] tableDescription = tableDescriptions[j].split(":");
-					String table = tableDescription[0];
-					if(map.containsKey(table)){
-						continue;
-					}
-					String prop = null;
-					String rowKey = null;
-					if(tableDescription.length==2){
-						rowKey = tableDescription[1];
-					}else{
-						rowKey = tableDescription[1];
-						prop = tableDescription[2];
-					}
-					NestNode node = new NestNode();
-					if(root==null){
-						parent = root = node;
-					}else{
-						List<NestNode> children = parent.getChildren();
-						if(children==null){
-							children = new ArrayList<>();
-							parent.setChildren(children);
-						}
-						children.add(node);
-						node.setParentNode(parent);
-						node.setParentProp(prop);
-					}
-					node.setTable(table);
-					node.setRowKey(rowKey);
-					map.put(table, node);//节点标记为已处理
-					parent = node;//下一个节点的父节点
-				}
-			}
-			res.setMap(map);
-			res.setRoot(root);
-		}
-		logger.info(JSONObject.toJSONString(res,true));
-		return res;
 	}
 	/**
 	 * 执行查询，sql支持#{}和${}占位符功能
@@ -379,7 +333,7 @@ public class Session {
 			sql = ParsedSql.getSql();
 		}
 		try (PreparedStatement ps = conn.prepareStatement(sql);) {
-			logger.info("sql=>{}",sql);
+			logger.debug("sql=>{}",sql);
 			String paramValues = null;
 			if(params!=null){
 				List<String> names = ParsedSql.getParamNames();
@@ -388,7 +342,7 @@ public class Session {
 				}
 				paramValues = names.stream().map(name->params.get(name)).collect(Collectors.toList()).toString();
 			}
-			logger.info("params=>{}",paramValues);
+			logger.debug("params=>{}",paramValues);
 			ResultSet rs = ps.executeQuery();
 			try{
 				JSONArray list = collectResultSet(rs);
@@ -481,7 +435,7 @@ public class Session {
 			sql = parsedSql.getSql();
 		}
 		try (PreparedStatement ps = conn.prepareStatement(sql)) {
-			logger.info("sql=>{}",sql);
+			logger.debug("sql=>{}",sql);
 			String values = null;
 			if(params!=null){
 				List<String> names = parsedSql.getParamNames();
@@ -490,7 +444,7 @@ public class Session {
 				}
 				values = names.stream().map(name->params.get(name)).collect(Collectors.toList()).toString();
 			}
-			logger.info("params=>{}",values);
+			logger.debug("params=>{}",values);
 			return ps.executeUpdate();
 		} catch (SQLException e) {
 			throw new RuntimeException(e);

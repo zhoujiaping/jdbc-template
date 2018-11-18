@@ -268,7 +268,7 @@ public class JdbcTemplate {
 	 * @param clazz
 	 * @return
 	 */
-	public <T> List<T> selectWithNest(String sql,JSONObject params,JSONArray config,Class<T> clazz){
+	public <T> List<T> selectWithNest(String sql,JSONObject params,List<String> config,Class<T> clazz){
 		Session session = sessionFactory.getSession(true);
 		JSONArray array = session.queryWithNest(sql, params, config);
 		return array.toJavaList(clazz);
@@ -281,7 +281,7 @@ public class JdbcTemplate {
 	 * @param clazz
 	 * @return
 	 */
-	public <T> T selectOneWithNest(String sql,JSONObject params,JSONArray config,Class<T> clazz){
+	public <T> T selectOneWithNest(String sql,JSONObject params,List<String> config,Class<T> clazz){
 		Session session = sessionFactory.getSession(true);
 		JSONArray array = session.queryWithNest(sql, params, config);
 		if(array.size()==0){
