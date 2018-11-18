@@ -16,7 +16,7 @@ public class MySqlTest {
 		String username = "root";
 		String password = "";
 		String driver = "com.mysql.jdbc.Driver";
-		String url = "jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true";
+		String url = "jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true";
 		Class.forName(driver);
 		Connection connection = DriverManager.getConnection(url, username, password);
 		PreparedStatement ps0 = connection.prepareStatement("select 1 from sys_user");

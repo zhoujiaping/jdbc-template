@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import org.sirenia.model.DbMetaData;
 import org.sirenia.util.Propertys;
 import org.sirenia.util.SqlUtils;
 import org.sirenia.util.page.Pageable;
@@ -28,29 +29,29 @@ public class Session {
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 	//缓存表名的主键名
 	private static Map<String,String> tablePkColumnNameMapper = new ConcurrentHashMap<>();
-	private JSONObject dbMetadata = new JSONObject();
-	private static final JSONObject columnsMetadata = new JSONObject();
+	private DbMetaData dbMetaData = new DbMetaData();
+	private static final JSONObject columnsMetaData = new JSONObject();
 	private Connection conn;
 	private boolean closed;
 	public Session(Connection conn){
 		this.conn = conn;
 	}
-	public void loadColumnsMetadata(String schema){
+	public void loadColumnsMetaData(String schema){
 		String sql = "select * from information_schema.columns where table_schema=#{schema};";
 		JSONObject params = new JSONObject();
 		params.put("schema", schema);
 		JSONArray metadata = query(sql,params );
-		columnsMetadata.put(schema, metadata);
+		columnsMetaData.put(schema, metadata);
 	}
-	public JSONArray getColumnsMetadata(String schema) {
+	public JSONArray getColumnsMetaData(String schema) {
 		if(schema==null){
-			schema = getDbMetadata().getString("catalog");
+			schema = getDbMetaData().getCatalog();
 		}
-		if(columnsMetadata.containsKey(schema)){
-			return columnsMetadata.getJSONArray(schema);
+		if(columnsMetaData.containsKey(schema)){
+			return columnsMetaData.getJSONArray(schema);
 		}
-		loadColumnsMetadata(schema);
-		return columnsMetadata.getJSONArray(schema);
+		loadColumnsMetaData(schema);
+		return columnsMetaData.getJSONArray(schema);
 	}
 	public boolean isClosed() {
 		return closed;
@@ -79,26 +80,26 @@ public class Session {
 	public JSONArray query(String sql) {
 		return query(sql,null);
 	}
-	public void loadDbMetadata(){
+	public void loadDbMetaData(){
 		try{
 			DatabaseMetaData md = conn.getMetaData();
 			//String schema = conn.getSchema();
 			String catalog = conn.getCatalog();
 			//dbmetadata.put("schema", schema);
-			dbMetadata.put("catalog", catalog);
+			dbMetaData.setCatalog(catalog);
 			String databaseProductName = md.getDatabaseProductName();// 获取数据库名：MySQL
-			dbMetadata.put("databaseProductName", databaseProductName);
+			dbMetaData.setDatabaseProductName(databaseProductName);
 		}catch(Exception e){
 			logger.error("加载数据库元数据异常",e);
 			throw new RuntimeException();
 		}
 	}
-	public JSONObject getDbMetadata(){
-		if(dbMetadata.containsKey("schema")){
-			return dbMetadata;
+	public DbMetaData getDbMetaData(){
+		if(dbMetaData.getCatalog()!=null){
+			return dbMetaData;
 		}
-		loadDbMetadata();
-		return dbMetadata;
+		loadDbMetaData();
+		return dbMetaData;
 	}
 	/**
 	 * @param sql
@@ -176,7 +177,7 @@ public class Session {
 	 * （表名也可以使用别名，如果支持的话。主键可以是其他能标识一条记录的字段名。根节点没有父节点，不用写属性名）
 	 * t1:id,t2:id:orderList,t4:item_id:itemList
 	 * t1:id,t3:addr_id:addr
-	 * 如果您使用mysql，在连接数据库的url加上useOldAliasMetadataBehavior=true，则可以使用表的别名。
+	 * 如果您使用mysql，在连接数据库的url加上useOldAliasMetaDataBehavior=true，则可以使用表的别名。
 	 * 如果您使用postgresql，由于其不支持别名，所以必须使用表名。这样在表的自连接的情况就无法使用该方法实现嵌套了。
 	 * pg自连接查询的解决办法：将自连接的另一个表的字段别名命名为"新表名$列别名"
 	 * 此外，该方法还有个缺陷，就是如果某一列通过计算得到或者不是从某个表查出，那么将不会计入结果。
@@ -421,7 +422,7 @@ public class Session {
 		return queryWithPage(sql,null,params,pageable);
 	}
 	public JSONObject queryWithPage(String sql,String countSql,JSONObject params,Pageable pageable) {
-		String dialect = getDbMetadata().getString("databaseProductName").toLowerCase();
+		String dialect = getDbMetaData().getDatabaseProductName().toLowerCase();
 		String pageSql = pageable.createPageSql(sql, dialect);
 		JSONArray rows = query(pageSql,params);
 		if(countSql == null){
@@ -482,17 +483,17 @@ public class Session {
 			throw new RuntimeException(e);
 		}
 	}
-	public JSONArray getColumnsMetadata(String schema, String table) {
-		JSONArray columnsMetadata = getColumnsMetadata(schema);
+	public JSONArray getColumnsMetaData(String schema, String table) {
+		JSONArray columnsMetaData = getColumnsMetaData(schema);
 		if(table==null){
-			return columnsMetadata;
+			return columnsMetaData;
 		}
 		JSONArray res = new JSONArray();
-		for(int i=0;i<columnsMetadata.size();i++){
-			JSONObject columnMetadata = columnsMetadata.getJSONObject(i);
-			String tablename = columnMetadata.getString("tableName");
+		for(int i=0;i<columnsMetaData.size();i++){
+			JSONObject columnMetaData = columnsMetaData.getJSONObject(i);
+			String tablename = columnMetaData.getString("tableName");
 			if(tablename.equalsIgnoreCase(table)){
-				res.add(columnMetadata);
+				res.add(columnMetaData);
 			}
 		}
 		return res;

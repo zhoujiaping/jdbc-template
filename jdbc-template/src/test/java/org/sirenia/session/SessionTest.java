@@ -68,12 +68,12 @@ public class SessionTest {
 		System.out.println(JSON.toJSONString(dept));
 	}
 	@Test
-	public void testMetadata(){
+	public void testMetaData(){
 		DruidDataSource dataSource = new DruidDataSource();
 		dataSource.setDriverClassName("com.mysql.jdbc.Driver");
 		dataSource.setUsername("root");
 		dataSource.setPassword("");
-		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
 		template.setSessionFactory(sessionFactory);
@@ -132,7 +132,7 @@ public class SessionTest {
 		dataSource.setDriverClassName("com.mysql.jdbc.Driver");
 		dataSource.setUsername("root");
 		dataSource.setPassword("");
-		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
 		template.setSessionFactory(sessionFactory);
@@ -149,7 +149,7 @@ public class SessionTest {
 		dataSource.setDriverClassName("com.mysql.jdbc.Driver");
 		dataSource.setUsername("root");
 		dataSource.setPassword("");
-		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
 		template.setSessionFactory(sessionFactory);
@@ -167,12 +167,12 @@ public class SessionTest {
 		dataSource.setDriverClassName("com.mysql.jdbc.Driver");
 		dataSource.setUsername("root");
 		dataSource.setPassword("");
-		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:mysql://localhost:3306/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
 		template.setSessionFactory(sessionFactory);
 		Session session = sessionFactory.getSession(true);
-		JSONArray columns = session.getColumnsMetadata("test");
+		JSONArray columns = session.getColumnsMetaData("test");
 		System.out.println(JSONArray.toJSONString(columns, true));
 	}
 	@Test
@@ -181,7 +181,7 @@ public class SessionTest {
 		dataSource.setDriverClassName("org.postgresql.Driver");
 		dataSource.setUsername("postgres");
 		dataSource.setPassword("123456");
-		dataSource.setUrl("jdbc:postgresql://localhost:5432/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:postgresql://localhost:5432/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
 		template.setSessionFactory(sessionFactory);
@@ -200,7 +200,7 @@ public class SessionTest {
 		dataSource.setDriverClassName("org.postgresql.Driver");
 		dataSource.setUsername("postgres");
 		dataSource.setPassword("123456");
-		dataSource.setUrl("jdbc:postgresql://localhost:5432/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:postgresql://localhost:5432/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		DefaultSessionFactory sessionFactory = new DefaultSessionFactory();
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
@@ -224,7 +224,7 @@ public class SessionTest {
 		dataSource.setDriverClassName("org.postgresql.Driver");
 		dataSource.setUsername("postgres");
 		dataSource.setPassword("123456");
-		dataSource.setUrl("jdbc:postgresql://localhost:5432/test?characterEncoding=UTF-8&useOldAliasMetadataBehavior=true");
+		dataSource.setUrl("jdbc:postgresql://localhost:5432/test?characterEncoding=UTF-8&useOldAliasMetaDataBehavior=true");
 		DefaultSessionFactory sessionFactory = new DefaultSessionFactory();
 		sessionFactory.setDataSource(dataSource );
 		JdbcTemplate template = new JdbcTemplate();
