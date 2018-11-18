@@ -16,6 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.sirenia.model.DbMetaData;
+import org.sirenia.model.Form;
+import org.sirenia.model.NestConf;
+import org.sirenia.model.NestNode;
 import org.sirenia.model.ParsedSql;
 import org.sirenia.util.Propertys;
 import org.sirenia.util.SqlUtils;
@@ -34,6 +37,7 @@ public class Session {
 	private static final JSONObject columnsMetaData = new JSONObject();
 	private Connection conn;
 	private boolean closed;
+	private static final char labelSeperator = '$';
 	public Session(Connection conn){
 		this.conn = conn;
 	}
@@ -107,7 +111,7 @@ public class Session {
 	 * @param params
 	 * @return
 	 */
-	public JSONObject queryWithForm(String sql,JSONObject params){
+	public Form queryForForm(String sql,JSONObject params){
 		ParsedSql parsedSql = null;
 		if(params!=null){
 			//设置参数
@@ -129,39 +133,39 @@ public class Session {
 			try{
 				ResultSetMetaData rsmd = rs.getMetaData();
 				int cc = rsmd.getColumnCount();
-				JSONArray props = new JSONArray(cc);
-				JSONArray tables = new JSONArray(cc);
-				JSONArray columns = new JSONArray(cc);
+				List<String> props = new ArrayList<>(cc);
+				List<String> tables = new ArrayList<>(cc);
+				List<String> columns = new ArrayList<>(cc);
 				for (int i = 1; i <= cc; i++) {
-					String label = rsmd.getColumnLabel(i);
+					String label = rsmd.getColumnLabel(i).toLowerCase();
 					String tableName = null;
-					int sepIndex = label.indexOf('$');
+					int sepIndex = label.indexOf(labelSeperator);
 					if(sepIndex>0){
 						tableName = label.substring(0, sepIndex);
 						label = label.substring(sepIndex+1);
 					}else{
-						tableName = rsmd.getTableName(i);
+						tableName = rsmd.getTableName(i).toLowerCase();
 					}
 					String propName = Propertys.underline2camel(label);
 					props.add(propName);
 					tables.add(tableName);
 					columns.add(label);
 				}
-				JSONObject res = new JSONObject();
-				JSONArray valuesArray = new JSONArray();
+				Form form = new Form();
+				List<List<Object>> valuesArray = new ArrayList<>();
 				while (rs.next()) {
-					JSONArray values = new JSONArray();
+					List<Object> values = new ArrayList<>(cc);
 					for (int i = 1; i <= cc; i++) {
 						Object value = rs.getObject(i);
 						values.add(value);
 					}
 					valuesArray.add(values);
 				}
-				res.put("columns", columns);
-				res.put("props", props);
-				res.put("tables", tables);
-				res.put("valuesArray", valuesArray);
-				return res;
+				form.setColumns(columns);
+				form.setProps(props);
+				form.setTables(tables);
+				form.setValuesArray(valuesArray);
+				return form;
 			}finally{
 				rs.close();
 			}
@@ -186,26 +190,27 @@ public class Session {
 	 * @return
 	 */
 	public JSONArray queryWithNest(String sql,JSONObject params,JSONArray config){
-		JSONObject formRes = queryWithForm(sql,params);
-		JSONArray valuesArray = formRes.getJSONArray("valuesArray");
+		Form form = queryForForm(sql,params);
+		List<List<Object>> valuesArray = form.getValuesArray();
 		Map<String,List<Integer>> columnIndexsMap = new HashMap<>();//每个表的字段对应哪些下标
-		JSONArray tables = formRes.getJSONArray("tables");
-		JSONObject conf = parseNestConfig(config);
-		JSONObject rootNode = conf.getJSONObject("root");
-		JSONObject nodeMap = conf.getJSONObject("map");
-		JSONArray columns = formRes.getJSONArray("columns");
+		List<String> tables = form.getTables();
+		NestConf nestConf = parseNestConfig(config);
+		NestNode rootNode = nestConf.getRoot();
+		Map<String,NestNode> nodeMap = nestConf.getMap();
+		List<String> columns = form.getColumns();
 		
 		Map<String,Integer> collectKeyIndexs = new HashMap<>();//每个表的rowKey对应的下标 table+rowKeyValue->rowKeyColumnIndex
-		Set<Entry<String,Object>> entrySet = nodeMap.entrySet();
-		for(Entry<String,Object> entry : entrySet){
-			JSONObject node = (JSONObject) entry.getValue();
-			String rowKey = node.getString("rowKey");
+		Set<Entry<String,NestNode>> entrySet = nodeMap.entrySet();
+		for(Entry<String,NestNode> entry : entrySet){
+			NestNode node = entry.getValue();
+			String rowKey = node.getRowKey();
 			if(rowKey!=null){
-				collectKeyIndexs.put(entry.getKey()+"."+rowKey,-1);
+				String tableRowKey = getTableRowKey(entry.getKey(), rowKey);
+				collectKeyIndexs.put(tableRowKey,-1);
 			}
 		}
 		for(int i=0;i<tables.size();i++){
-			String table = tables.getString(i);
+			String table = tables.get(i).toString();
 			List<Integer> columnIndexs = columnIndexsMap.get(table);
 			if(columnIndexs==null){
 				columnIndexs = new ArrayList<>();
@@ -213,29 +218,36 @@ public class Session {
 			}
 			columnIndexs.add(i);
 			//
-			String column = columns.getString(i);
-			String possiblerowKey = table+"."+column;
-			if(collectKeyIndexs.containsKey(possiblerowKey)){
-				collectKeyIndexs.put(possiblerowKey, i);
+			String column = columns.get(i).toString();
+			String possibleTableRowKey = getTableRowKey(table,column);
+			if(collectKeyIndexs.containsKey(possibleTableRowKey)){
+				collectKeyIndexs.put(possibleTableRowKey, i);
 			}
 		}
 		JSONArray res = new JSONArray();
-		JSONObject collected = new JSONObject();
+		Map<String,JSONObject> collected = new HashMap<>();
 		for(int i=0;i<valuesArray.size();i++){
 			//遍历树，深度优先遍历
-			JSONArray values = valuesArray.getJSONArray(i);
-			JSONObject nestRes = generateNestResult(formRes,values,columnIndexsMap,null,rootNode,collected,collectKeyIndexs);
+			List<Object> values = valuesArray.get(i);
+			JSONObject nestRes = generateNestResult(form,values,columnIndexsMap,null,rootNode,collected,collectKeyIndexs);
 			if(nestRes!=null){//如果驱动表非重复的行
 				res.add(nestRes);
 			}
 		}
 		return res;
 	}
-	private JSONObject generateNestResult(JSONObject formRes, JSONArray values,
-			Map<String, List<Integer>> columnIndexsMap, JSONObject parentNode,JSONObject node,JSONObject collected, Map<String, Integer> collectKeyIndexs) {
-		String table = node.getString("table");
-		String rowKey = node.getString("rowKey");
-		int collectKeyIndex = collectKeyIndexs.get(table+"."+rowKey);
+	private String getTableRowKey(String table,String rowKey){
+		return table+"."+rowKey;
+	}
+	private String getDataKey(String table,Object rowKeyValue){
+		return table+"."+rowKeyValue;
+	}
+	private JSONObject generateNestResult(Form form, List<Object> values,
+			Map<String, List<Integer>> columnIndexsMap, JSONObject parentNode,NestNode node,Map<String,JSONObject> collected, Map<String, Integer> collectKeyIndexs) {
+		String table = node.getTable();
+		String rowKey = node.getRowKey();
+		String tableRowKey = getTableRowKey(table,rowKey);
+		int collectKeyIndex = collectKeyIndexs.get(tableRowKey);
 		if(collectKeyIndex<0){
 			return null;
 		}
@@ -243,27 +255,27 @@ public class Session {
 		if(rowKeyValue==null){
 			return null;
 		}
-		String collectedKey = table + "." + rowKeyValue;
-		JSONObject res = collected.getJSONObject(collectedKey);
+		String collectedKey =getDataKey(table,rowKeyValue);
+		JSONObject res = collected.get(collectedKey);
 		boolean rowExists = res!=null;
 		if(!rowExists){
 			res = new JSONObject();
 			List<Integer> columnIndexs = columnIndexsMap.get(table);
-			JSONArray props = formRes.getJSONArray("props");
+			List<String> props = form.getProps();
 			for(int i=0;i<columnIndexs.size();i++){
 				int columIndex = columnIndexs.get(i);
-				String prop = props.getString(columIndex);
+				String prop = props.get(columIndex);
 				Object value = values.get(columIndex);
 				res.put(prop, value);
 			}
 			collected.put(collectedKey, res);
 		}
-		JSONArray children = node.getJSONArray("children");
+		List<NestNode> children = node.getChildren();
 		if(children!=null){
 			for(int i=0;i<children.size();i++){
-				JSONObject childNode = children.getJSONObject(i);
-				String parentProp = childNode.getString("parentProp");
-				JSONObject child = generateNestResult(formRes,values,columnIndexsMap,res,childNode,collected,collectKeyIndexs);
+				NestNode childNode = children.get(i);
+				String parentProp = childNode.getParentProp();
+				JSONObject child = generateNestResult(form,values,columnIndexsMap,res,childNode,collected,collectKeyIndexs);
 				if(parentProp.endsWith("List")){
 					JSONArray list = res.getJSONArray(parentProp);
 					if(list == null){
@@ -290,7 +302,7 @@ public class Session {
 		JSONArray config = new JSONArray();
 		config.add("t1:id,t2:orderList:id,t4:itemList");
 		config.add("t1:id,t3:addr");
-		JSONObject res = parseNestConfig(config);
+		NestConf res = parseNestConfig(config);
 		System.out.println(JSONObject.toJSONString(res,true));
 	}
 	/**
@@ -301,14 +313,14 @@ public class Session {
 	 * @return JSONObject
 	 * it is a tree
 	 */
-	private static JSONObject parseNestConfig(JSONArray config) {
-		JSONObject res = null;
+	private static NestConf parseNestConfig(JSONArray config) {
+		NestConf res = null;
 		if(config!=null && !config.isEmpty()){
-			res = new JSONObject();
-			JSONObject root = null;
-			JSONObject map = new JSONObject();
+			res = new NestConf();
+			NestNode root = null;
+			Map<String,NestNode> map = new HashMap<>();
 			for(int i=0;i<config.size();i++){
-				JSONObject parent = root;
+				NestNode parent = root;
 				String line = config.getString(i).replaceAll("\\s", "");
 				if(line.equals("")){
 					continue;
@@ -328,27 +340,27 @@ public class Session {
 						rowKey = tableDescription[1];
 						prop = tableDescription[2];
 					}
-					JSONObject node = new JSONObject();
+					NestNode node = new NestNode();
 					if(root==null){
 						parent = root = node;
 					}else{
-						JSONArray children = parent.getJSONArray("children");
+						List<NestNode> children = parent.getChildren();
 						if(children==null){
-							children = new JSONArray();
-							parent.put("children", children);
+							children = new ArrayList<>();
+							parent.setChildren(children);
 						}
 						children.add(node);
-						node.put("parentNode", parent);
-						node.put("parentProp", prop);
+						node.setParentNode(parent);
+						node.setParentProp(prop);
 					}
-					node.put("table", table);
-					node.put("rowKey", rowKey);
+					node.setTable(table);
+					node.setRowKey(rowKey);
 					map.put(table, node);//节点标记为已处理
 					parent = node;//下一个节点的父节点
 				}
 			}
-			res.put("root", root);
-			res.put("map", map);
+			res.setMap(map);
+			res.setRoot(root);
 		}
 		logger.info(JSONObject.toJSONString(res,true));
 		return res;
