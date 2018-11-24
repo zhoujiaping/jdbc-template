@@ -9,8 +9,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.sirenia.util.Callback0;
-import org.sirenia.util.Callback1;
+import org.sirenia.util.Callback00;
+import org.sirenia.util.Callback10;
 import org.sirenia.util.Callback11;
 import org.sirenia.util.GenericTokenParser;
 import org.slf4j.Logger;
@@ -91,7 +91,7 @@ public class DbClient {
 	 * 打开连接，执行回调，关闭连接
 	 * @param callback
 	 */
-	public void withConn(Callback1<Connection> callback) {
+	public void withConn(Callback10<Connection> callback) {
 		try (Connection conn = DriverManager.getConnection(url, username, password);) {
 			this.conn = conn;
 			conn.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
@@ -124,7 +124,7 @@ public class DbClient {
 	 * 如果未打开连接：打开连接，执行回调，提交事务，关闭连接
 	 * @param callback
 	 */
-	public void withTx(Callback0 callback) {
+	public void withTx(Callback00 callback) {
 		if(this.conn==null){
 			withConn(client->{
 				withTxInternal(callback);
@@ -140,7 +140,7 @@ public class DbClient {
 	 * 如果未打开连接：打开连接，执行回调，提交事务，关闭连接
 	 * @param callback
 	 */
-	public void withTx(Callback1<DbClient> callback) {
+	public void withTx(Callback10<DbClient> callback) {
 		if(this.conn==null){
 			withConn(client->{
 				withTxInternal(callback);
@@ -149,7 +149,7 @@ public class DbClient {
 			withTxInternal(callback);
 		}
 	}
-	private void withTxInternal(Callback0 callback) {
+	private void withTxInternal(Callback00 callback) {
 		try {
 			callback.apply();
 			conn.commit();
@@ -162,7 +162,7 @@ public class DbClient {
 			throw new RuntimeException(e);
 		}
 	}
-	private void withTxInternal(Callback1<DbClient> callback) {
+	private void withTxInternal(Callback10<DbClient> callback) {
 		try {
 			callback.apply(this);
 			conn.commit();

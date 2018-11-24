@@ -13,7 +13,7 @@ import java.util.Map;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sirenia.util.Callback1;
+import org.sirenia.util.Callback10;
 
 public class MysqlLockTest {
 	@BeforeClass
@@ -35,7 +35,7 @@ public class MysqlLockTest {
 			throw new RuntimeException(e);
 		}
 	}
-	public void withConnection(Callback1<Connection> callback){
+	public void withConnection(Callback10<Connection> callback){
 		String username = "";
 		String password = "";
 		String url = "jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=UTF-8";
