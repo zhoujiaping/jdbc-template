@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
-public class Session {
+public class Session implements AutoCloseable{
 	private static final Logger logger = LoggerFactory.getLogger(Session.class);
 	//缓存表名的主键名
 	private static Map<String,String> tablePkColumnNameMapper = new ConcurrentHashMap<>();
@@ -496,6 +496,19 @@ public class Session {
 			tablePkColumnNameMapper.put(tablename, columnName);
 			return columnName;
 		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	@Override
+	public void close() throws Exception {
+		try {
+			SessionHolder.remove();
+			Connection conn = this.getConn();
+			if(conn!=null && !conn.isClosed()){
+				conn.close();
+				this.clearConn();
+			}
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}

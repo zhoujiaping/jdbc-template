@@ -6,6 +6,6 @@ public interface SessionFactory {
 
 	Session getSession(boolean createIfNotExsists);
 
-	void closeSession(Session session);
+	void closeSession(Session session) throws Exception;
 
 }

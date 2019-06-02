@@ -37,16 +37,7 @@ public class DefaultSessionFactory implements SessionFactory {
 		}
 	}
 
-	public void closeSession(Session session) {
-		try {
-			SessionHolder.remove();
-			Connection conn = session.getConn();
-			if(conn!=null && !conn.isClosed()){
-				conn.close();
-				session.clearConn();
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+	public void closeSession(Session session) throws Exception {
+		session.close();
 	}
 }

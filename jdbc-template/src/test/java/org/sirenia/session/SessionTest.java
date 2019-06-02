@@ -33,7 +33,7 @@ public class SessionTest {
 	//private SpringSessionFactory sessionFactory;
 	private DefaultSessionFactory sessionFactory = new DefaultSessionFactory();
 	@Test
-	public void testMySession(){
+	public void testMySession() throws Exception{
 		//testServiceImpl.updateTest();
 		DruidDataSource dataSource = new DruidDataSource();
 		dataSource.setDriverClassName("");
