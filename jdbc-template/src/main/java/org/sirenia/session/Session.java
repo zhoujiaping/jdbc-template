@@ -358,18 +358,18 @@ public class Session {
 		try{
 			ResultSetMetaData rsmd = rs.getMetaData();
 			int cc = rsmd.getColumnCount();
-			JSONArray propNames = new JSONArray(cc);
+			JSONArray labels = new JSONArray(cc);
 			for (int i = 1; i <= cc; i++) {
 				String label = rsmd.getColumnLabel(i);
-				String propName = Propertys.underline2camel(label);
-				propNames.add(propName);
+				labels.add(label);
 			}
 			JSONArray rows = new JSONArray();
 			while (rs.next()) {
 				JSONObject row = new JSONObject();
-				for (int i = 1; i <= cc; i++) {
-					String propName = propNames.getString(i);
-					Object value = rs.getObject(propName);
+				for (int i = 0; i < cc; i++) {
+					String label = labels.getString(i);
+					Object value = rs.getObject(label);
+					String propName = Propertys.underline2camel(label);
 					row.put(propName, value);
 				}
 				rows.add(row);
