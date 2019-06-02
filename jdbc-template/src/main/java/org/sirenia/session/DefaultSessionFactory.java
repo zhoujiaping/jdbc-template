@@ -6,7 +6,6 @@ import javax.sql.DataSource;
 
 public class DefaultSessionFactory implements SessionFactory {
 	private DataSource dataSource;
-	private ThreadLocal<Session> sessionHolder = new ThreadLocal<>();
 
 	public DataSource getDataSource() {
 		return dataSource;
@@ -19,7 +18,7 @@ public class DefaultSessionFactory implements SessionFactory {
 	}
 	public Session getSession(boolean createIfNotExsists) {
 		try {
-			Session session = sessionHolder.get();
+			Session session = SessionHolder.get();
 			if (session != null) {
 				return session;
 			}
@@ -28,7 +27,7 @@ public class DefaultSessionFactory implements SessionFactory {
 			if (createIfNotExsists) {
 				Connection conn = dataSource.getConnection();
 				session = new Session(conn);
-				sessionHolder.set(session);
+				SessionHolder.set(session);
 				return session;
 			} else {
 				return null;
@@ -40,7 +39,7 @@ public class DefaultSessionFactory implements SessionFactory {
 
 	public void closeSession(Session session) {
 		try {
-			sessionHolder.remove();
+			SessionHolder.remove();
 			Connection conn = session.getConn();
 			if(conn!=null && !conn.isClosed()){
 				conn.close();
